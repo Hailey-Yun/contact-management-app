@@ -116,13 +116,13 @@ GET /contacts?all=true
 
 ### Login Page
 <p align="center">
-  <img src="./images/img1.png" width="45%" /><br>
-  <sub>Login Form</sub>
-  <img src="./images/img2.png" width="45%" /><br>
-  <sub>Contact List</sub>
+
+| Login Form | Contact List |
+|------------|--------------|
+| <img src="./images/img1.png" width="45%"> | <img src="./images/img2.png" width="45%"> |
+| 로그인 화면 | 연락처 리스트 화면 |
+
 </p>
-
-
 ---
 
 ## Tech Stack
