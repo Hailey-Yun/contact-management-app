@@ -114,18 +114,17 @@ GET /contacts?all=true
 ---
 ## Screenshots
 
-<div style="display:flex; gap:20px;">
-  <figure>
-    <img src="./images/img1.png" width="300">
-    <figcaption align="center">Login Form</figcaption>
-  </figure>
+### Login Page
+<p align="center">
+  <img src="./images/img1.png" width="45%" /><br>
+  <sub>Login Form</sub>
+</p>
 
-  <figure>
-    <img src="./images/img2.png" width="300">
-    <figcaption align="center">Contact List</figcaption>
-  </figure>
-</div>
-
+<p align="center">
+  <img src="./images/img2.png" width="45%" /><br>
+  <sub>Contact List</sub>
+</p>
+단점
 ---
 
 ## Tech Stack
