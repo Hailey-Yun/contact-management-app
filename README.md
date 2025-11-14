@@ -44,8 +44,9 @@ A responsive and interactive UI featuring:
 ## Project Structure
 
 contact-management-app/
-├── backend/   
-└── frontend/  
+├── backend/    
+└── frontend/   
+
 ---
 
 ## Backend Setup
