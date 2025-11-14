@@ -44,9 +44,8 @@ A responsive and interactive UI featuring:
 ## Project Structure
 
 contact-management-app/
- backend/   (Nest.js API)
- frontend/  (Next.js Client)
-
+├── backend/   
+└── frontend/  
 ---
 
 ## Backend Setup
