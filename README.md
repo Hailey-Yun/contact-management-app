@@ -118,13 +118,11 @@ GET /contacts?all=true
 <p align="center">
   <img src="./images/img1.png" width="45%" /><br>
   <sub>Login Form</sub>
-</p>
-
-<p align="center">
   <img src="./images/img2.png" width="45%" /><br>
   <sub>Contact List</sub>
 </p>
-단점
+
+
 ---
 
 ## Tech Stack
