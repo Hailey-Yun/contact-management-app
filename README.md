@@ -114,14 +114,37 @@ GET /contacts?all=true
 ---
 
 ## Screenshots
-![img1](./images/img1.png)
-![img2](./images/img2.png)
-![img3](./images/img3.png)
-![img4](./images/img4.png)
-![img5](./images/img5.png)
-![img6](./images/img6.png)
-![img7](./images/img7.png)
-![img8](./images/img8.png)
+<p align="center">
+  <img src="./images/img1.png" width="30%" />
+</p>
+
+<p align="center">
+  <img src="./images/img2.png" width="30%" />
+</p>
+
+<p align="center">
+  <img src="./images/img3.png" width="30%" />
+</p>
+
+<p align="center">
+  <img src="./images/img4.png" width="30%" />
+</p>
+
+<p align="center">
+  <img src="./images/img5.png" width="30%" />
+</p>
+
+<p align="center">
+  <img src="./images/img6.png" width="30%" />
+</p>
+
+<p align="center">
+  <img src="./images/img7.png" width="30%" />
+</p>
+
+<p align="center">
+  <img src="./images/img8.png" width="30%" />
+</p>
 
 ---
 
