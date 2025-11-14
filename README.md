@@ -116,11 +116,11 @@ GET /contacts?all=true
 ## Screenshots
 
 <p align="center">
-  <img src="./images/img1.png" width="50%" />
+  <img src="./images/img1.png" width="30%" />
 </p>
 
 <p align="center">
-  <img src="./images/img2.png" width="50%" />
+  <img src="./images/img2.png" width="30%" />
 </p>
 
 <p align="center">
