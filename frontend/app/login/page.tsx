@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '../../lib/api';
 
@@ -42,64 +42,62 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: 400,
-        margin: '60px auto',
-        padding: 20,
-        border: '1px solid #ddd',
-        borderRadius: 8,
-      }}
-    >
-      <h1 style={{ marginBottom: 20 }}>Login</h1>
+    <div className="flex min-h-screen items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-md border border-slate-100">
+        <h1 className="mb-6 text-2xl font-bold text-slate-900 text-center">Login</h1>
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label>Email</label>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ width: '100%' }}
-          />
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Email
+            </label>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>Password</label>
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ width: '100%' }}
-          />
-        </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Password
+            </label>
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+          </div>
 
-        {error && (
-          <p style={{ color: 'red', marginBottom: 12 }}>{error}</p>
-        )}
+          {error && (
+            <p className="text-sm text-red-600">
+              {error}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%',
-            padding: '10px 0',
-            background: '#4f46e5',
-            color: 'white',
-            borderRadius: 6,
-            border: 'none',
-            cursor: 'pointer',
-          }}
-        >
-          {loading ? 'Logging in...' : 'Login'}
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+          >
+            {loading ? 'Logging in…' : 'Login'}
+          </button>
+        </form>
 
-      <p style={{ marginTop: 16, fontSize: 14 }}>
-        Don't have an account? <a href="/register">Sign up</a>
-      </p>
+        <p className="mt-4 text-center text-sm text-slate-600">
+          Don't have an account?{' '}
+          <a
+            href="/register"
+            className="font-semibold text-blue-600  hover:underline"
+          >
+            Sign up
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

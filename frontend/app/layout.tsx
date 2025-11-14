@@ -3,8 +3,8 @@ import './globals.css';
 import { AuthProvider } from './AuthContext';
 
 export const metadata: Metadata = {
-  title: 'Contact Management App',
-  description: 'Full-stack contact manager',
+  title: 'Contacts App',
+  description: 'Nest + Next contact manager',
 };
 
 export default function RootLayout({
@@ -14,8 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <AuthProvider>{children}</AuthProvider>
+      <body className="min-h-screen bg-slate-50 text-slate-900">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

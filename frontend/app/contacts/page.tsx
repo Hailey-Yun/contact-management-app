@@ -13,15 +13,16 @@ type Contact = {
   createdAt: string;
 };
 
-const PAGE_LIMIT = 10; // 10 items per page
+const PAGE_LIMIT = 10;
 
 export default function ContactsPage() {
   const router = useRouter();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
-  // Form state for creating a new contact
+  // Create form state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -29,33 +30,37 @@ export default function ContactsPage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Edit state
+  // Edit mode state
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
-  // Search + sort state
+  // Search / sort / pagination
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'createdAt'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
-
-  // Pagination state
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
-  // Login check + load contacts
+  // Auth check + role + load contacts
   useEffect(() => {
     const token =
       typeof window !== 'undefined'
         ? localStorage.getItem('accessToken')
+        : null;
+    const storedRole =
+      typeof window !== 'undefined'
+        ? localStorage.getItem('userRole')
         : null;
 
     if (!token) {
       router.push('/login');
       return;
     }
+
+    if (storedRole && storedRole !== role) setRole(storedRole);
 
     const fetchContacts = async () => {
       try {
@@ -69,30 +74,18 @@ export default function ContactsPage() {
             search: search || undefined,
             sortBy,
             sortOrder,
+            all: storedRole === 'admin' ? true : undefined,
           },
         });
 
-        let list: Contact[] = [];
-        let total = 0;
+        const data = Array.isArray(res.data.data)
+          ? res.data.data
+          : Array.isArray(res.data)
+          ? res.data
+          : [];
 
-        // When backend returns { data: [...], total, page, limit }
-        if (Array.isArray(res.data.data)) {
-          list = res.data.data;
-          total =
-            typeof res.data.total === 'number'
-              ? res.data.total
-              : res.data.data.length;
-        }
-        // When backend returns just an array
-        else if (Array.isArray(res.data)) {
-          list = res.data;
-          total = res.data.length;
-        }
-
-        setContacts(list);
-
-        // Determine if there is a next page based on total count
-        setHasMore(total > page * PAGE_LIMIT);
+        setContacts(data);
+        setHasMore(data.length === PAGE_LIMIT);
       } catch (err: any) {
         console.error(err);
         setError(
@@ -105,13 +98,11 @@ export default function ContactsPage() {
     };
 
     fetchContacts();
-  }, [router, page, search, sortBy, sortOrder]);
+  }, [router, page, search, sortBy, sortOrder, role]);
 
-  // File selection + preview
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     setPhotoFile(file);
-
     if (file) {
       const url = URL.createObjectURL(file);
       setPhotoPreview(url);
@@ -120,7 +111,6 @@ export default function ContactsPage() {
     }
   };
 
-  // Create a new contact
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -134,19 +124,12 @@ export default function ContactsPage() {
       if (photoFile) formData.append('photo', photoFile);
 
       const res = await api.post('/contacts', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       const created: Contact = res.data;
+      if (page === 1) setContacts((prev) => [created, ...prev]);
 
-      // If current page is 1, immediately prepend the new contact
-      if (page === 1) {
-        setContacts((prev) => [created, ...prev]);
-      }
-
-      // Reset form
       setName('');
       setEmail('');
       setPhone('');
@@ -163,7 +146,6 @@ export default function ContactsPage() {
     }
   };
 
-  // Start editing
   const startEdit = (c: Contact) => {
     setEditingId(c.id);
     setEditName(c.name);
@@ -171,7 +153,6 @@ export default function ContactsPage() {
     setEditPhone(c.phone ?? '');
   };
 
-  // Cancel editing
   const cancelEdit = () => {
     setEditingId(null);
     setEditName('');
@@ -179,22 +160,14 @@ export default function ContactsPage() {
     setEditPhone('');
   };
 
-  // Save edited contact
   const handleEditSave = async (id: number) => {
     setEditSaving(true);
     try {
-      const payload = {
-        name: editName,
-        email: editEmail,
-        phone: editPhone,
-      };
-
+      const payload = { name: editName, email: editEmail, phone: editPhone };
       const res = await api.patch(`/contacts/${id}`, payload);
       const updated: Contact = res.data;
 
-      setContacts((prev) =>
-        prev.map((c) => (c.id === id ? updated : c)),
-      );
+      setContacts((prev) => prev.map((c) => (c.id === id ? updated : c)));
       cancelEdit();
     } catch (err: any) {
       console.error(err);
@@ -207,16 +180,12 @@ export default function ContactsPage() {
     }
   };
 
-  // Delete contact
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this contact?')) return;
-
     try {
       await api.delete(`/contacts/${id}`);
       setContacts((prev) => prev.filter((c) => c.id !== id));
-      if (editingId === id) {
-        cancelEdit();
-      }
+      if (editingId === id) cancelEdit();
     } catch (err: any) {
       console.error(err);
       alert(
@@ -228,405 +197,349 @@ export default function ContactsPage() {
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('userRole');
     router.push('/login');
   };
 
-  // Search form submit (for Enter key)
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault();
   };
 
-  // When search text changes, reset to page 1
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
+  const handleSearchChange = (v: string) => {
+    setSearch(v);
+    setPage(1);
+  };
+  const handleSortByChange = (v: 'name' | 'createdAt') => {
+    setSortBy(v);
+    setPage(1);
+  };
+  const handleSortOrderChange = (v: 'ASC' | 'DESC') => {
+    setSortOrder(v);
     setPage(1);
   };
 
-  const handleSortByChange = (value: 'name' | 'createdAt') => {
-    setSortBy(value);
-    setPage(1);
-  };
-
-  const handleSortOrderChange = (value: 'ASC' | 'DESC') => {
-    setSortOrder(value);
-    setPage(1);
-  };
-
-  // Page navigation
   const goPrevPage = () => {
     if (page > 1) setPage((p) => p - 1);
   };
-
   const goNextPage = () => {
     if (hasMore) setPage((p) => p + 1);
   };
 
+  // ------------------- JSX (Tailwind) -------------------
   return (
-    <div style={{ padding: 20 }}>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 20,
-        }}
-      >
-        <h1>My Contacts</h1>
-        <button onClick={handleLogout}>Logout</button>
-      </header>
-
-      {/* Search + Sort */}
-      <section
-        style={{
-          marginBottom: 16,
-          padding: 12,
-          border: '1px solid #ddd',
-          borderRadius: 8,
-          maxWidth: 800,
-        }}
-      >
-        <form
-          onSubmit={handleSearchSubmit}
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 8,
-            alignItems: 'center',
-          }}
-        >
-          {/* Search */}
-          <div style={{ flex: '1 1 200px' }}>
-            <label style={{ fontSize: 12, color: '#555' }}>
-              Search (name / email)
-            </label>
-            <input
-              type="text"
-              placeholder="Search..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </div>
-
-          {/* Sort By */}
+    <div className="min-h-screen px-4 py-6">
+      <div className="mx-auto flex max-w-5xl flex-col gap-6">
+        {/* Header */}
+        <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <label style={{ fontSize: 12, color: '#555' }}>Sort By</label>
-            <select
-              value={sortBy}
-              onChange={(e) =>
-                handleSortByChange(e.target.value as 'name' | 'createdAt')
-              }
-            >
-              <option value="createdAt">Created At</option>
-              <option value="name">Name</option>
-            </select>
+            <h1 className="text-3xl font-bold text-slate-900">My Contacts</h1>
+            {role && (
+              <p className="mt-1 text-sm text-slate-500">
+                Logged in as <span className="font-semibold">{role}</span>
+              </p>
+            )}
           </div>
+          <button
+            onClick={handleLogout}
+            className="inline-flex items-center justify-center rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-slate-900"
+          >
+            Logout
+          </button>
+        </header>
 
-          {/* Sort Order */}
-          <div>
-            <label style={{ fontSize: 12, color: '#555' }}>Order</label>
-            <select
-              value={sortOrder}
-              onChange={(e) =>
-                handleSortOrderChange(e.target.value as 'ASC' | 'DESC')
-              }
-            >
-              <option value="DESC">DESC</option>
-              <option value="ASC">ASC</option>
-            </select>
-          </div>
+        {/* Search & Sort */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+          >
+            <div className="flex-1">
+              <label className="mb-1 block text-xs font-medium text-slate-600">
+                Search (name / email)
+              </label>
+              <input
+                type="text"
+                placeholder="Search..."
+                value={search}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
 
-          <div>
-            <button type="submit">Apply</button>
-          </div>
-        </form>
-      </section>
+            <div className="flex flex-wrap gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Sort By
+                </label>
+                <select
+                  value={sortBy}
+                  onChange={(e) =>
+                    handleSortByChange(e.target.value as 'name' | 'createdAt')
+                  }
+                  className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="createdAt">Created At</option>
+                  <option value="name">Name</option>
+                </select>
+              </div>
 
-      {/* Add New Contact Form */}
-      <section
-        style={{
-          marginBottom: 24,
-          padding: 16,
-          border: '1px solid #ccc',
-          borderRadius: 8,
-          maxWidth: 500,
-        }}
-      >
-        <h2 style={{ marginBottom: 12 }}>Add New Contact</h2>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Order
+                </label>
+                <select
+                  value={sortOrder}
+                  onChange={(e) =>
+                    handleSortOrderChange(e.target.value as 'ASC' | 'DESC')
+                  }
+                  className="rounded-lg border border-slate-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="DESC">DESC</option>
+                  <option value="ASC">ASC</option>
+                </select>
+              </div>
 
-        <form onSubmit={handleCreate}>
-          <div style={{ marginBottom: 8 }}>
-            <label>
-              Name{' '}
+              <button
+                type="submit"
+                className="h-9 rounded-lg bg-blue-600 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700"
+              >
+                Apply
+              </button>
+            </div>
+          </form>
+        </section>
+
+        {/* Add New Contact */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 text-lg font-semibold text-slate-900">
+            Add New Contact
+          </h2>
+
+          <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                Name
+              </label>
               <input
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-            </label>
-          </div>
+            </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <label>
-              Email{' '}
+            <div>
+              <label className="block text-xs font-medium text-slate-600">
+                Email
+              </label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-            </label>
-          </div>
+            </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <label>
-              Phone{' '}
+            <div>
+              <label className="block text-xs font-medium text-slate-600">
+                Phone
+              </label>
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-            </label>
-          </div>
+            </div>
 
-          <div style={{ marginBottom: 8 }}>
-            <label>
-              Photo{' '}
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-slate-600">
+                Photo
+              </label>
               <input
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
+                className="mt-1 text-sm"
               />
-            </label>
-            {photoFile && (
-              <div style={{ fontSize: 12, color: '#555' }}>
-                Selected: {photoFile.name}
+              {photoFile && (
+                <p className="mt-1 text-xs text-slate-500">
+                  Selected: {photoFile.name}
+                </p>
+              )}
+            </div>
+
+            {photoPreview && (
+              <div className="sm:col-span-2">
+                <p className="mb-1 text-xs text-slate-500">Preview:</p>
+                <img
+                  src={photoPreview}
+                  alt="Preview"
+                  className="h-20 w-20 rounded-lg border border-slate-200 object-cover"
+                />
               </div>
             )}
-          </div>
 
-          {/* Preview */}
-          {photoPreview && (
-            <div style={{ marginBottom: 8 }}>
-              <p style={{ fontSize: 12, color: '#555' }}>Preview:</p>
-              <img
-                src={photoPreview}
-                alt="Preview"
-                style={{
-                  width: 80,
-                  height: 80,
-                  objectFit: 'cover',
-                  borderRadius: 8,
-                  border: '1px solid #ccc',
-                }}
-              />
+            {error && (
+              <p className="sm:col-span-2 text-sm text-red-600">{error}</p>
+            )}
+
+            <div className="sm:col-span-2">
+              <button
+                type="submit"
+                disabled={saving}
+                className="inline-flex items-center justify-center rounded-lg bg-blue-600  px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+              >
+                {saving ? 'Saving…' : 'Add Contact'}
+              </button>
             </div>
-          )}
+          </form>
+        </section>
 
-          {error && (
-            <p style={{ color: 'red', marginBottom: 8 }}>{error}</p>
-          )}
-
-          <button type="submit" disabled={saving}>
-            {saving ? 'Saving...' : 'Add Contact'}
-          </button>
-        </form>
-      </section>
-
-      {/* Contact List */}
-      <section>
-        {loading ? (
-          <p>Loading contacts...</p>
-        ) : contacts.length === 0 ? (
-          <p>No contacts have been added yet.</p>
-        ) : (
-          <>
-            <table
-              style={{
-                borderCollapse: 'collapse',
-                width: '100%',
-                maxWidth: 800,
-              }}
-            >
-              <thead>
-                <tr>
-                  <th style={{ borderBottom: '1px solid #ccc', padding: 8 }}>
-                    Photo
-                  </th>
-                  <th style={{ borderBottom: '1px solid #ccc', padding: 8 }}>
-                    Name
-                  </th>
-                  <th style={{ borderBottom: '1px solid #ccc', padding: 8 }}>
-                    Email
-                  </th>
-                  <th style={{ borderBottom: '1px solid #ccc', padding: 8 }}>
-                    Phone
-                  </th>
-                  <th style={{ borderBottom: '1px solid #ccc', padding: 8 }}>
-                    Created At
-                  </th>
-                  <th style={{ borderBottom: '1px solid #ccc', padding: 8 }}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
+        {/* Contact List */}
+        <section className="space-y-3">
+          {loading ? (
+            <p className="text-sm text-slate-500">Loading contacts...</p>
+          ) : contacts.length === 0 ? (
+            <p className="text-sm text-slate-500">
+              No contacts have been added yet.
+            </p>
+          ) : (
+            <>
+              <div className="grid gap-3 md:grid-cols-2">
                 {contacts.map((c) => {
                   const photoUrl = c.photo
                     ? `http://localhost:3000/uploads/contacts/${c.photo}`
                     : null;
-
                   const isEditing = editingId === c.id;
 
                   return (
-                    <tr key={c.id}>
-                      {/* Photo */}
-                      <td
-                        style={{
-                          borderBottom: '1px solid #eee',
-                          padding: 8,
-                        }}
-                      >
+                    <div
+                      key={c.id}
+                      className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
+                      <div className="mt-1">
                         {photoUrl ? (
                           <img
                             src={photoUrl}
                             alt={c.name}
-                            style={{
-                              width: 40,
-                              height: 40,
-                              objectFit: 'cover',
-                              borderRadius: 50,
-                            }}
+                            className="h-12 w-12 rounded-full object-cover"
                           />
                         ) : (
-                          <span
-                            style={{
-                              fontSize: 12,
-                              color: '#999',
-                            }}
-                          >
-                            No photo
-                          </span>
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-400">
+                            No<br />photo
+                          </div>
                         )}
-                      </td>
+                      </div>
 
-                      {/* Name */}
-                      <td
-                        style={{
-                          borderBottom: '1px solid #eee',
-                          padding: 8,
-                        }}
-                      >
+                      <div className="flex flex-1 flex-col gap-1">
+                        {/* Name */}
                         {isEditing ? (
                           <input
                             value={editName}
                             onChange={(e) => setEditName(e.target.value)}
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         ) : (
-                          c.name
+                          <div className="text-sm font-semibold text-slate-900">
+                            {c.name}
+                          </div>
                         )}
-                      </td>
 
-                      {/* Email */}
-                      <td
-                        style={{
-                          borderBottom: '1px solid #eee',
-                          padding: 8,
-                        }}
-                      >
+                        {/* Email */}
                         {isEditing ? (
                           <input
                             value={editEmail}
                             onChange={(e) => setEditEmail(e.target.value)}
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         ) : (
-                          c.email
+                          <div className="text-xs text-slate-600">
+                            {c.email || <span className="italic">No email</span>}
+                          </div>
                         )}
-                      </td>
 
-                      {/* Phone */}
-                      <td
-                        style={{
-                          borderBottom: '1px solid #eee',
-                          padding: 8,
-                        }}
-                      >
+                        {/* Phone */}
                         {isEditing ? (
                           <input
                             value={editPhone}
                             onChange={(e) => setEditPhone(e.target.value)}
+                            className="w-full rounded-md border border-slate-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
                           />
                         ) : (
-                          c.phone
+                          <div className="text-xs text-slate-600">
+                            {c.phone || <span className="italic">No phone</span>}
+                          </div>
                         )}
-                      </td>
 
-                      {/* Created At */}
-                      <td
-                        style={{
-                          borderBottom: '1px solid #eee',
-                          padding: 8,
-                        }}
-                      >
-                        {new Date(c.createdAt).toLocaleString()}
-                      </td>
+                        <div className="mt-1 text-[11px] text-slate-400">
+                          {new Date(c.createdAt).toLocaleString()}
+                        </div>
 
-                      {/* Actions */}
-                      <td
-                        style={{
-                          borderBottom: '1px solid #eee',
-                          padding: 8,
-                        }}
-                      >
-                        {isEditing ? (
-                          <>
-                            <button
-                              onClick={() => handleEditSave(c.id)}
-                              disabled={editSaving}
-                              style={{ marginRight: 8 }}
-                            >
-                              {editSaving ? 'Saving...' : 'Save'}
-                            </button>
-                            <button onClick={cancelEdit}>Cancel</button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => startEdit(c)}
-                              style={{ marginRight: 8 }}
-                            >
-                              Edit
-                            </button>
-                            <button onClick={() => handleDelete(c.id)}>
-                              Delete
-                            </button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
+                        {/* Actions */}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {isEditing ? (
+                            <>
+                              <button
+                                onClick={() => handleEditSave(c.id)}
+                                disabled={editSaving}
+                                className="inline-flex items-center rounded-full bg-emerald-600 px-3 py-1 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
+                              >
+                                {editSaving ? 'Saving…' : 'Save'}
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              >
+                                Cancel
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => startEdit(c)}
+                                className="inline-flex items-center rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(c.id)}
+                                className="inline-flex items-center rounded-full bg-rose-600 px-3 py-1 text-xs font-medium text-white hover:bg-rose-700"
+                              >
+                                Delete
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
 
-            {/* Pagination */}
-            <div
-              style={{
-                marginTop: 12,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <button onClick={goPrevPage} disabled={page === 1 || loading}>
-                Prev
-              </button>
-              <span>Page {page}</span>
-              <button onClick={goNextPage} disabled={!hasMore || loading}>
-                Next
-              </button>
-            </div>
-          </>
-        )}
-      </section>
+              {/* Pagination */}
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={goPrevPage}
+                  disabled={page === 1 || loading}
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  Prev
+                </button>
+                <span className="text-xs text-slate-500">
+                  Page {page}
+                </span>
+                <button
+                  onClick={goNextPage}
+                  disabled={!hasMore || loading}
+                  className="rounded-full border border-slate-300 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }
