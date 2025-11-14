@@ -115,17 +115,20 @@ GET /contacts?all=true
 
 ## Screenshots
 
-<div align="center" style="display: flex; justify-content: center; gap: 20px;">
-  <figure>
-    <img src="./images/img1.png" width="300">
+<div align="center" style="display: flex; justify-content: center; gap: 40px;">
+
+  <figure style="text-align: center;">
+    <img src="./images/img1.png" width="350">
     <figcaption>Login Form</figcaption>
   </figure>
 
-  <figure>
-    <img src="./images/img2.png" width="300">
+  <figure style="text-align: center;">
+    <img src="./images/img2.png" width="350">
     <figcaption>Contact List</figcaption>
   </figure>
+
 </div>
+
 
 ---
 
