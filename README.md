@@ -39,13 +39,13 @@ A responsive and interactive UI featuring:
 - Custom styling similar to Tailwind
 - Clean and modern layout
 
----
+---  
 
 ## Project Structure
 
 contact-management-app/
-├── backend/    
-└── frontend/   
+├── backend/
+└── frontend/
 
 ---
 
